@@ -1,0 +1,38 @@
+name: Build Application
+
+# Déclenche le workflow à chaque 'push' ou 'pull request' sur la branche principale
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Récupération du code source depuis le dépôt
+    - name: Checkout du code
+      uses: actions/checkout@v4
+
+    # 2. Installation et configuration de l'environnement Go
+    - name: Configuration de Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21' # Modifiez cette version pour qu'elle corresponde à celle de votre go.mod
+
+    # 3. Téléchargement des dépendances (s'il y en a)
+    - name: Téléchargement des dépendances
+      run: go mod download
+
+    # 4. Compilation de l'application
+    - name: Build de l'exécutable
+      run: go build -v -o quelpoke main.go
+
+    # 5. Sauvegarde du binaire en tant qu'artefact téléchargeable
+    - name: Upload de l'artefact
+      uses: actions/upload-artifact@v4
+      with:
+        name: quelpoke-binary
+        path: quelpoke

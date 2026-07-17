@@ -59,7 +59,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	params := indexTemplateParams{
 		PokemonID: pokemonID(name, 151),
 		Name:      name,
-		Version:   env("VERSION", "cesi v1.1"),
+		Version:   env("VERSION", "cesi v1.2"),
 	}
 	params.PokemonName, err = pokemonName(params.PokemonID)
 	if err != nil {

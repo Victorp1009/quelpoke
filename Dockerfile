@@ -1,5 +1,5 @@
 # Étape 1 : Compilation (Builder)
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 # Copie des fichiers sources
 COPY . .

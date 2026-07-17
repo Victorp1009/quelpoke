@@ -22,15 +22,17 @@ jobs:
     - name: Configuration de Docker pour GCP
       run: gcloud auth configure-docker ${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev --quiet
 
-    # 3. Build et Push de l'image
+# 3. Build et Push de l'image
     - name: Build et Push de l'image Docker
       run: |
-        # Construction du tag complet de l'image
-        # Format: europe-west1-docker.pkg.dev/cs-poc-hpzdycpiqjyvinhrczvlwcn/quelpoke-billie/quelpoke:<sha-du-commit>
-        IMAGE_TAG="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:${{ github.sha }}"
+        # Définition des deux tags
+        IMAGE_TAG_SHA="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:${{ github.sha }}"
+        IMAGE_TAG_LATEST="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:latest"
         
-        echo "Construction de l'image : $IMAGE_TAG"
-        docker build -t $IMAGE_TAG .
+        echo "Construction de l'image..."
+        # On ajoute les deux tags lors du build avec -t
+        docker build -t $IMAGE_TAG_SHA -t $IMAGE_TAG_LATEST .
         
-        echo "Envoi de l'image sur Artifact Registry..."
-        docker push $IMAGE_TAG
+        echo "Envoi des images sur Artifact Registry..."
+        docker push $IMAGE_TAG_SHA
+        docker push $IMAGE_TAG_LATEST

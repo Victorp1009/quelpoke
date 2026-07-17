@@ -1,38 +1,51 @@
-name: CI - Build and Push to Artifact Registry
+name: CI/CD - Build, Push and Deploy
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout du code
       uses: actions/checkout@v4
 
-    # 1. Authentification auprès de Google Cloud avec le Secret GCP_SA_KEY
+    # 1. Authentification Google Cloud
     - name: Authentification Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-    # 2. Configuration de Docker pour s'authentifier sur le registre de la région europe-west1
+    # 2. Configuration Docker
     - name: Configuration de Docker pour GCP
       run: gcloud auth configure-docker ${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev --quiet
 
-# 3. Build et Push de l'image
+    # 3. PARTIE CI : Build et Push
     - name: Build et Push de l'image Docker
       run: |
-        # Définition des deux tags
         IMAGE_TAG_SHA="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:${{ github.sha }}"
         IMAGE_TAG_LATEST="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:latest"
         
         echo "Construction de l'image..."
-        # On ajoute les deux tags lors du build avec -t
         docker build -t $IMAGE_TAG_SHA -t $IMAGE_TAG_LATEST .
         
         echo "Envoi des images sur Artifact Registry..."
         docker push $IMAGE_TAG_SHA
         docker push $IMAGE_TAG_LATEST
+
+    # 4. PARTIE CD : Déploiement automatisé sur la VM
+    - name: Déploiement sur la VM
+      run: |
+        IMAGE_LATEST="${{ vars.ARTIFACT_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO_ID }}/quelpoke:latest"
+        
+        # La séquence de commandes à exécuter sur la machine distante
+        DEPLOY_CMD="docker pull $IMAGE_LATEST && docker stop quelpoke-app || true && docker rm quelpoke-app || true && docker run -d --name quelpoke-app -p 80:8080 $IMAGE_LATEST"
+        
+        echo "Connexion à la VM et mise à jour de l'application..."
+        gcloud compute ssh ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_NAME }} \
+          --zone=${{ secrets.GCP_VM_ZONE }} \
+          --project=${{ vars.GCP_PROJECT_ID }} \
+          --quiet \
+          --command="$DEPLOY_CMD"
